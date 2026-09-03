@@ -17,8 +17,8 @@ declare module '@liquicode/jsonstor-couchdb'
 		Server: string;
 		/** The service port of the server. Defaults to `5984`. */
 		Port?: number;
-		/** Reach the server over `https` rather than `http`. Defaults to `false`. */
-		Secure?: boolean;
+		/** Reach the server over `https` rather than `http`. There is no `TrustServerCertificate` beside it, because this adapter has no driver except the global `fetch`, which offers no supported way to relax certificate verification. See the notes. Defaults to `false`. */
+		Encrypt?: boolean;
 		/** The CouchDB database this storage reads and writes. It is the collection: one database holds one collection's documents. */
 		DatabaseName: string;
 		/** The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. Defaults to `"_id"`. */

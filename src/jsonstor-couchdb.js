@@ -230,7 +230,7 @@ module.exports = {
 			Settings = {
 				Server: '',                          // The name or address of the server.
 				Port: 5984,                          // The service port.
-				Secure: false,                       // Whether to reach the server over https.
+				Encrypt: false,                      // Whether to reach the server over https.
 				DatabaseName: '',                    // The database holding this collection.
 				UserName: '',                        // The user to connect as. Empty for none.
 				Password: '',                        // That user's password. Empty for none.
@@ -248,7 +248,21 @@ module.exports = {
 		let Storage = jsonstor.StorageInterface();
 		Storage.Settings = jsongin.Clone( Settings );
 		if ( jsongin.ShortType( Storage.Settings.Port ) !== 'n' ) { Storage.Settings.Port = 5984; }
-		if ( jsongin.ShortType( Storage.Settings.Secure ) !== 'b' ) { Storage.Settings.Secure = false; }
+		// ***`Encrypt` rather than `Secure`, to say it the way the family says it.*** Renamed
+		// 2026-09-03, when `jsonstor-mssql`'s pair was made the standing spelling across every
+		// adapter whose driver can carry it. ***The rename was free because this package has
+		// never been published***, which is the same licence the two `MangoExpression` options
+		// were renamed under.
+		//
+		// ***There is no `TrustServerCertificate` here, and that is a measurement rather than an
+		// omission.*** This adapter's driver is the runtime's own `fetch`, which offers no
+		// supported way to relax certificate verification for one request: there is no `undici`
+		// dependency to reach for, no `node:undici` builtin, and no `setGlobalDispatcher` on the
+		// global. The only lever is `NODE_TLS_REJECT_UNAUTHORIZED`, which is process-wide and is
+		// not a library's to set. ***So an https CouchDB presenting a self-signed certificate is
+		// out of reach from here***, and declaring a setting which could not be honored would be
+		// a capability that renders nothing.
+		if ( jsongin.ShortType( Storage.Settings.Encrypt ) !== 'b' ) { Storage.Settings.Encrypt = false; }
 		if ( jsongin.ShortType( Storage.Settings.UserName ) !== 's' ) { Storage.Settings.UserName = ''; }
 		if ( jsongin.ShortType( Storage.Settings.Password ) !== 's' ) { Storage.Settings.Password = ''; }
 		// ***An identifier field is always configured.*** A database this adapter did not
@@ -278,7 +292,7 @@ module.exports = {
 		//---------------------------------------------------------------------
 		function base_url()
 		{
-			let scheme = Storage.Settings.Secure ? 'https' : 'http';
+			let scheme = Storage.Settings.Encrypt ? 'https' : 'http';
 			return `${scheme}://${Storage.Settings.Server}:${Storage.Settings.Port}`;
 		}
 

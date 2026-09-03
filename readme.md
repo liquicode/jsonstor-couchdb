@@ -38,7 +38,7 @@ jsonstor.LoadPlugin( require( '@liquicode/jsonstor-couchdb' ) );
 let storage = jsonstor.GetStorage( 'jsonstor-couchdb', {
 	Server: '...',
 	Port: 5984,
-	Secure: false,
+	Encrypt: false,
 	DatabaseName: '...',
 	IdField: "_id",
 	PayloadField: "jsonstor_document",
@@ -75,7 +75,7 @@ Settings
 |---|:---:|:---:|---|
 | `Server` | ***Yes*** | - | The name or address of the CouchDB server. |
 | `Port` | No | `5984` | The service port of the server. |
-| `Secure` | No | `false` | Reach the server over `https` rather than `http`. |
+| `Encrypt` | No | `false` | Reach the server over `https` rather than `http`. There is no `TrustServerCertificate` beside it, because this adapter has no driver except the global `fetch`, which offers no supported way to relax certificate verification. See the notes. |
 | `DatabaseName` | ***Yes*** | - | The CouchDB database this storage reads and writes. It is the collection: one database holds one collection's documents. |
 | `IdField` | No | `"_id"` | The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. |
 | `PayloadField` | No | `"jsonstor_document"` | The field which stores the document. Empty means none, and then the document *is* the CouchDB document - which is what a database you already have looks like. See the notes. |
@@ -85,6 +85,7 @@ Settings
 Peculiarities
 ---------------------------------------------------------------------
 
+- ***An https server whose certificate is self-signed cannot be reached from here.*** `Encrypt` selects `https`, but there is no setting beside it to accept an untrusted certificate: the driver is the global `fetch`, and it offers no supported way to relax verification for one request. A CouchDB behind a real certificate is fine; a self-signed one needs a proxy which presents a trusted one.
 - ***A CouchDB database is a jsonstor collection.*** CouchDB has no collections inside a database, so `DatabaseName` names the collection and one database holds one. `DropStorage` is a single `DELETE` which removes exactly this storage's documents, and a query never walks a neighbouring collection.
 - ***The database is an index over the document, not the document.*** This is the same shape the SQL adapters here have, for the same reason: ***CouchDB requires a document identifier to be a string***, and a jsonstor `_id` may be a number. So the CouchDB `_id` holds `String( )` of the identifier and the document itself travels in `PayloadField`, where it keeps its own types. ***This is the configuration which answers every question the other adapters answer***: an absent field stays apart from one holding null, a number does not come back a string, and an object keeps its field order.
   - ***`PayloadField` set, which is the default.*** Any identifier type round-trips, and a collection reads back in the order it was written.
