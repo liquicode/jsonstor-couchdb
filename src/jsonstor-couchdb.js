@@ -268,8 +268,28 @@ module.exports = {
 		// ***An identifier field is always configured.*** A database this adapter did not
 		// create keys on whatever field its author chose, and naming it is the only way to
 		// read one. `_id` is what jsonstor writes when nobody says otherwise.
-		if ( jsongin.ShortType( Storage.Settings.IdField ) !== 's' ) { Storage.Settings.IdField = '_id'; }
-		if ( !Storage.Settings.IdField.length ) { Storage.Settings.IdField = '_id'; }
+		// ***PrimaryKey is the current spelling and IdField is the deprecated one.*** Resolve
+		// reads either and prefers the current. This package is unpublished, so the alias costs
+		// nothing here - it is carried for uniformity with the six SQL adapters, where two
+		// published packages declare the old name.
+		let key_declaration = jsonstor.PrimaryKey.Resolve( Storage.Settings );
+		if ( key_declaration.Fields.length > 1 )
+		{
+			// ***Declared, not built.*** A CouchDB `_id` is one string, so an adapter which
+			// cannot honor a composite key refuses it by name rather than keying on the first.
+			throw new Error( `This adapter does not support a composite PrimaryKey: [${key_declaration.Fields.join( ', ' )}].` );
+		}
+		Storage.Settings.IdField = key_declaration.Fields.length ? key_declaration.Fields[ 0 ] : '_id';
+		Storage.PrimaryKeyInfo = {
+			Fields: [ Storage.Settings.IdField ],
+			// ***The key is a string and the payload carries the true typed value beside it.***
+			// CouchDB requires a string identifier, which is jsonstor-sqlite's id_to_key() in
+			// CouchDB's vocabulary - see the note at the top of this file.
+			Types: [ 's' ],
+			Mutable: false,
+			Generated: true,
+			IndexHostedBy: 'database',
+		};
 		// ***A payload by default***, because a database this adapter creates has no shape to
 		// respect and full fidelity is what the rest of the family answers with. An empty
 		// string is the other configuration - see the note at the top of this file.
@@ -863,6 +883,20 @@ module.exports = {
 		// `_ensure_full_commit` existed to force it and was removed in 3.0, so asking for it
 		// would work against one of the two servers this profile covers and fail against the
 		// other.
+		//=====================================================================
+		// RefreshIndex
+		//=====================================================================
+
+
+		// ***A no-op which answers 0, and means it.*** CouchDB keys every document by `_id` and
+		// maintains that index itself; there is nothing here which could go stale and nothing to
+		// rebuild. Implemented rather than left to the interface stub, because the stub throws.
+		Storage.RefreshIndex = async function ( Options )
+		{
+			return 0;
+		};
+
+
 		Storage.FlushStorage = async function ( Options )
 		{
 			await ensure_floor_checked();
@@ -1018,6 +1052,18 @@ module.exports = {
 		//=====================================================================
 
 
+		// Refuses an update or a replace which moved the identifier. See
+		// jsonx/.plans/primary-keys-and-indexes.md - refusing is the only one of the three
+		// measured behaviors which cannot mislead a caller. This adapter honored the move,
+		// which is the least wrong of the three and still not what the family answers.
+		function check_key_move( Before, After )
+		{
+			if ( Storage.PrimaryKeyInfo.Mutable ) { return; }
+			if ( Before === After ) { return; }
+			throw new Error( `The primary key [${Storage.Settings.IdField}] is not mutable, and this operation would change it from [${Before}] to [${After}].` );
+		}
+
+
 		Storage.UpdateOne = async function ( Criteria, Updates, Options )
 		{
 			if ( jsongin.ShortType( Options ) !== 'o' ) { Options = {}; }
@@ -1029,6 +1075,7 @@ module.exports = {
 			if ( search.Found )
 			{
 				modified = jsongin.Update( search.Found.Document, Updates );
+				check_key_move( search.Found.Document[ Storage.Settings.IdField ], modified[ Storage.Settings.IdField ] );
 				await write_documents( stage_replacement( search.Found, modified ) );
 				modified_count++;
 			}
@@ -1054,6 +1101,7 @@ module.exports = {
 			{
 				let entry = search.Entries[ index ];
 				let document = jsongin.Update( entry.Document, Updates );
+				check_key_move( entry.Document[ Storage.Settings.IdField ], document[ Storage.Settings.IdField ] );
 				modified.push( document );
 				raw_documents = raw_documents.concat( stage_replacement( entry, document ) );
 			}
@@ -1072,7 +1120,6 @@ module.exports = {
 		{
 			if ( jsongin.ShortType( Options ) !== 'o' ) { Options = {}; }
 			if ( jsongin.ShortType( Document ) !== 'o' ) { throw new Error( `Document must be an object.` ); }
-			if ( jsongin.ShortType( Document[ Storage.Settings.IdField ] ) === 'u' ) { throw new Error( `Document must contain an ${Storage.Settings.IdField} field.` ); }
 			await ensure_floor_checked();
 			let search = await find_first( Criteria );
 			let modified = null;
@@ -1080,6 +1127,17 @@ module.exports = {
 			if ( search.Found )
 			{
 				modified = jsongin.Clone( Document );
+				// ***A replacement with no primary key carries the matched document's key over.***
+				// This adapter used to throw here, which was one of three behaviors across the
+				// family - four adapters threw, three changed the key, six kept it - and the
+				// guide's own documented example is the shape which threw.
+				let key_field = Storage.Settings.IdField;
+				if ( typeof modified[ key_field ] === 'undefined' )
+				{
+					let carried = search.Found.Document[ key_field ];
+					if ( typeof carried !== 'undefined' ) { modified[ key_field ] = carried; }
+				}
+				check_key_move( search.Found.Document[ key_field ], modified[ key_field ] );
 				await write_documents( stage_replacement( search.Found, modified ) );
 				modified_count++;
 			}

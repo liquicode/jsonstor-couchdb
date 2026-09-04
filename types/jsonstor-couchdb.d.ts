@@ -21,8 +21,10 @@ declare module '@liquicode/jsonstor-couchdb'
 		Encrypt?: boolean;
 		/** The CouchDB database this storage reads and writes. It is the collection: one database holds one collection's documents. */
 		DatabaseName: string;
-		/** The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. Defaults to `"_id"`. */
-		IdField?: string;
+		/** The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. `IdField` is the former spelling and still works. Defaults to `"_id"`. */
+		PrimaryKey?: string;
+		/** Allow an update or a replacement to change the identifier. Off by default, so an operation which would move it is refused by name rather than silently discarded. Defaults to `false`. */
+		PrimaryKeyMutable?: boolean;
 		/** The field which stores the document. Empty means none, and then the document *is* the CouchDB document - which is what a database you already have looks like. See the notes. Defaults to `"jsonstor_document"`. */
 		PayloadField?: string;
 		/** The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. Defaults to `''`. */

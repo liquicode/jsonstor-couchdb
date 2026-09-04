@@ -40,7 +40,8 @@ let storage = jsonstor.GetStorage( 'jsonstor-couchdb', {
 	Port: 5984,
 	Encrypt: false,
 	DatabaseName: '...',
-	IdField: "_id",
+	PrimaryKey: "_id",
+	PrimaryKeyMutable: false,
 	PayloadField: "jsonstor_document",
 	UserName: '',
 	Password: '',
@@ -77,7 +78,8 @@ Settings
 | `Port` | No | `5984` | The service port of the server. |
 | `Encrypt` | No | `false` | Reach the server over `https` rather than `http`. There is no `TrustServerCertificate` beside it, because this adapter has no driver except the global `fetch`, which offers no supported way to relax certificate verification. See the notes. |
 | `DatabaseName` | ***Yes*** | - | The CouchDB database this storage reads and writes. It is the collection: one database holds one collection's documents. |
-| `IdField` | No | `"_id"` | The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. |
+| `PrimaryKey` | No | `"_id"` | The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. `IdField` is the former spelling and still works. |
+| `PrimaryKeyMutable` | No | `false` | Allow an update or a replacement to change the identifier. Off by default, so an operation which would move it is refused by name rather than silently discarded. |
 | `PayloadField` | No | `"jsonstor_document"` | The field which stores the document. Empty means none, and then the document *is* the CouchDB document - which is what a database you already have looks like. See the notes. |
 | `UserName` | No | `''` | The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. |
 | `Password` | No | `''` | That user's password. Empty means none. |
@@ -90,7 +92,7 @@ Peculiarities
 - ***The database is an index over the document, not the document.*** This is the same shape the SQL adapters here have, for the same reason: ***CouchDB requires a document identifier to be a string***, and a jsonstor `_id` may be a number. So the CouchDB `_id` holds `String( )` of the identifier and the document itself travels in `PayloadField`, where it keeps its own types. ***This is the configuration which answers every question the other adapters answer***: an absent field stays apart from one holding null, a number does not come back a string, and an object keeps its field order.
   - ***`PayloadField` set, which is the default.*** Any identifier type round-trips, and a collection reads back in the order it was written.
   - ***`PayloadField` empty.*** The document *is* the CouchDB document, which is what a database you already have looks like - use this to read one. The identifier must then be a string, and one which is not is ***refused by name*** rather than stored as something else. A collection reads back in the server's `_id` order.
-- ***`IdField` names the field which is the identifier***, so a database keyed on something other than `_id` can be read. It is written on insert and never touched by an update or a replace, which is the rule every adapter in this family keeps.
+- ***`PrimaryKey` names the field which is the identifier***, so a database keyed on something other than `_id` can be read. It is written on insert and never touched by an update or a replace, which is the rule every adapter in this family keeps. `IdField` is the former spelling and resolves to it.
 - ***This adapter installs no database driver.*** CouchDB is HTTP and JSON, so the server is reached with the runtime's own `fetch`. That is where the `>=18.0.0` engine floor comes from - it is the release where `fetch` arrived on by default - and it is the only thing in this package which needs a Node newer than `jsonstor` itself does.
 - ***A criteria is pushed down to CouchDB's Mango, and what it cannot read is decided by `jsongin`.*** This is the same translator `jsonstor-mongodb` uses, narrowed. An equality - `$eq` and the plain `{ field: value }` form - is decided by the server, along with `$and`, `$or`, `$exists` and `$mod`; the four comparisons, `$in`, `$ne`, `$nin` and `$elemMatch` narrow the search and `jsongin` settles the answer; `$not`, `$nor`, `$regex`, `$size`, `$all` and `$type` are decided by `jsongin`. The answer is the same one either way - what a dropped operator costs is a document read, never a wrong result.
 - ***Two of CouchDB's answers differ from MongoDB's, and the adapter asks each one a second way rather than losing a document.***
