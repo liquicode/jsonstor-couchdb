@@ -43,8 +43,8 @@ let storage = jsonstor.GetStorage( 'jsonstor-couchdb', {
 	PrimaryKey: "_id",
 	PrimaryKeyMutable: false,
 	PayloadField: "jsonstor_document",
-	UserName: '',
-	Password: '',
+	UserName: "",
+	Password: "",
 } );
 ```
 
@@ -81,8 +81,8 @@ Settings
 | `PrimaryKey` | No | `"_id"` | The document field which is the identifier. Its value becomes the CouchDB `_id`, so name the field a database you already have is keyed on. `IdField` is the former spelling and still works. |
 | `PrimaryKeyMutable` | No | `false` | Allow an update or a replacement to change the identifier. Off by default, so an operation which would move it is refused by name rather than silently discarded. |
 | `PayloadField` | No | `"jsonstor_document"` | The field which stores the document. Empty means none, and then the document *is* the CouchDB document - which is what a database you already have looks like. See the notes. |
-| `UserName` | No | `''` | The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. |
-| `Password` | No | `''` | That user's password. Empty means none. |
+| `UserName` | No | `""` | The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. |
+| `Password` | No | `""` | That user's password. Empty means none. |
 
 Peculiarities
 ---------------------------------------------------------------------

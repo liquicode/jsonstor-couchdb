@@ -27,9 +27,9 @@ declare module '@liquicode/jsonstor-couchdb'
 		PrimaryKeyMutable?: boolean;
 		/** The field which stores the document. Empty means none, and then the document *is* the CouchDB document - which is what a database you already have looks like. See the notes. Defaults to `"jsonstor_document"`. */
 		PayloadField?: string;
-		/** The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. Defaults to `''`. */
+		/** The user to connect as. Empty means none, which only a CouchDB 2.x server with no administrator will accept. Defaults to `""`. */
 		UserName?: string;
-		/** That user's password. Empty means none. Defaults to `''`. */
+		/** That user's password. Empty means none. Defaults to `""`. */
 		Password?: string;
 	}
 
