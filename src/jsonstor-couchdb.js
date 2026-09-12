@@ -182,6 +182,9 @@ const OPERATOR_FIDELITIES = {
 	//                          without being asked. ***Declared broadening rather than exact***
 	//                          because that exactness rests on four probes and not on the
 	//                          inventory as well, and this table is the intersection of the two.
+	//                          ***And the elements are all it reaches*** - `{ $in: [ [] ] }`
+	//                          lost `{ a: [] }`, measured 2026-09-12 - so the translator offers
+	//                          the whole-array equality beside it for an array member.
 	'$gt': 'broadening',
 	'$gte': 'broadening',
 	'$lt': 'broadening',
@@ -193,8 +196,11 @@ const OPERATOR_FIDELITIES = {
 	// a whole-or-nothing position demands `exact` rather than merely renderable.
 	'$not': 'dropped',
 
-	// `$size` disagrees about an array holding arrays and objects.
-	'$size': 'dropped',
+	// `$size` disagreed about an array holding arrays and objects - ***and the disagreement was
+	// the engine's***, repaired 2026-09-12, when it stopped counting a nested array's elements.
+	// CouchDB counts plainly on both servers, measured the same day over the parity corpus, on
+	// a plain field and on a path with the prefix branches. ***Exact since 2026-09-12.***
+	'$size': 'exact',
 
 	// ***`$regex` refuses `$options` outright***, and a `$regex` which silently lost its `i`
 	// flag matches fewer strings - a narrowing wearing a simplification's clothes. The wave's
@@ -512,6 +518,11 @@ module.exports = {
 				// against the field's value and never against an array's elements, where
 				// jsongin and MongoDB do both. Measured on both servers 2026-09-03.
 				ExcludesArrayElements: true,
+				// ***CouchDB's `$mod` answers for integers only.*** jsongin and MongoDB truncate
+				// the field's value first, so 11.5 satisfies `$mod: [ 5, 1 ]`; CouchDB answers
+				// false. The translator offers every fractional number to the residual and
+				// lowers `$mod` to broadening. Measured on both servers 2026-09-12.
+				ModMatchesIntegersOnly: true,
 			};
 		}
 
@@ -1029,7 +1040,7 @@ module.exports = {
 		// building one per call would make a read a schema change. `MangoExpression` says as
 		// much - it reports `SortAbsorbed: false` - so this is the translator's declaration
 		// carried out rather than a shortcut around it.
-		Storage.FindMany2 = async function ( Criteria, Projection, Sort, MaxCount, Options )
+		Storage.FindMany2 = async function ( Criteria, Projection, Sort, Paging, Options )
 		{
 			if ( jsongin.ShortType( Options ) !== 'o' ) { Options = {}; }
 			check_criteria( Criteria );
@@ -1041,7 +1052,7 @@ module.exports = {
 				documents.push( jsongin.Project( search.Entries[ index ].Document, Projection ) );
 			}
 			if ( Sort ) { documents = jsongin.Sort( documents, Sort ); }
-			if ( MaxCount && ( MaxCount > 0 ) && ( documents.length >= MaxCount ) ) { documents = documents.splice( 0, MaxCount ); }
+			documents = jsonstor.Paging.Apply( documents, Paging );
 			report_scan( Options, search.Translation, search.Scanned, documents.length );
 			return documents;
 		};
