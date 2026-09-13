@@ -107,6 +107,9 @@ const OPERATOR_FIDELITIES = {
 	'$bitsAllClear': 'dropped',
 	'$bitsAnySet': 'dropped',
 	'$bitsAnyClear': 'dropped',
+	// `$jsonSchema` is MongoDB's own as well, and the refusal is the same `invalid_operator`
+	// on both servers. Measured on 2.3.1 and 3.5 on 2026-09-12.
+	'$jsonSchema': 'dropped',
 
 	// ***Refused although they constrain nothing.*** MongoDB accepts `$comment` and ignores
 	// it; CouchDB refuses it by name. `$sampleRate` is the same story, and dropping it is
